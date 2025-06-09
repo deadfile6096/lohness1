@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NESS SYSTEM :: Submarine Entity Containment</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="favicon/favicon.png">
+    <style>
+        html {
+            font-size: 16px; /* Base for rem units, can be adjusted if needed */
+            scroll-behavior: smooth;
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+        :root {
+            --bg-color: #081f2d;
+            --primary-accent: #11ffd2;
+            --secondary-accent: #00b4a0;
+            --text-color: #ffffff;
+            --font-primary: 'Orbitron', sans-serif;
+            --font-secondary: 'Share Tech Mono', monospace;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--font-secondary);
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            line-height: 1.6;
+            font-size: 1rem; /* Base font size for body text */
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1200px; /* Default max-width */
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        @media (min-width: 1600px) {
+            .container {
+                max-width: 1400px;
+            }
+        }
+
+        @media (min-width: 2000px) {
+            .container {
+                max-width: 1700px; /* Adjusted for very wide screens */
+            }
+        }
+
+        h1, h2, h3 {
+            font-family: var(--font-primary);
+            color: var(--primary-accent);
+            text-shadow: 0 0 5px var(--primary-accent), 0 0 10px var(--primary-accent);
+        }
+
+        h2 {
+            font-size: clamp(1.6rem, 3.5vw, 2.8rem); /* min, preferred (viewport-based), max */
+        }
+
+        h3 {
+            font-size: clamp(1.3rem, 2.8vw, 2.2rem);
+        }
+
+        /* Terminal Input Section */
+        #terminal-input {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            background: radial-gradient(circle, rgba(8,31,45,0.8) 0%, rgba(8,31,45,1) 70%),
+                        linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)),
+                        repeating-linear-gradient(0deg, transparent, transparent 2px, var(--secondary-accent) 3px, var(--secondary-accent) 4px);
+            animation: waterRipples 15s infinite linear, flicker 0.5s infinite alternate;
+            position: relative; /* Added for video background */
+            overflow: hidden; /* To contain the video */
+        }
+
+        @keyframes waterRipples {
+            0% { background-position: 0 0; }
+            100% { background-position: 0 -1000px; }
+        }
+        
+        @keyframes flicker {
+            0% { opacity: 0.95; }
+            100% { opacity: 1; }
+        }
+
+        #terminal-header {
+            font-size: clamp(1.8em, 5vw, 4em); /* Responsive font size */
+            margin-bottom: 30px;
+            white-space: nowrap;
+            overflow: hidden;
+            border-right: .15em solid var(--primary-accent); /* Cursor */
+            animation: typing 3.5s steps(40, end), blink-caret .75s step-end infinite;
+            position: relative; /* Added for video background */
+            z-index: 1; /* Added for video background */
+        }
+
+        @keyframes typing {
+            from { width: 0 }
+            to { width: 100% }
+        }
+
+        @keyframes blink-caret {
+            from, to { border-color: transparent }
+            50% { border-color: var(--primary-accent); }
+        }
+
+        .terminal-button {
+            font-family: var(--font-primary);
+            background-color: transparent;
+            border: 2px solid var(--primary-accent);
+            color: var(--primary-accent);
+            padding: 15px 30px;
+            font-size: 1.2em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 10px var(--primary-accent) inset, 0 0 5px var(--primary-accent);
+            text-transform: uppercase;
+            position: relative; /* Added for video background */
+            z-index: 1; /* Added for video background */
+        }
+
+        .terminal-button:hover {
+            background-color: var(--primary-accent);
+            color: var(--bg-color);
+            box-shadow: 0 0 20px var(--primary-accent), 0 0 10px var(--primary-accent) inset;
+        }
+
+        /* General Section Styling */
+        .section {
+            padding: 60px 0;
+            border-bottom: 1px dashed var(--secondary-accent);
+            opacity: 0;
+            transform: translateY(50px);
+            transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+        }
+
+        .section.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Project Description */
+        #project-description {
+            background: linear-gradient(to bottom, var(--bg-color), #0a2a3f);
+        }
+
+        #project-description .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start; /* Align items to the top */
+        }
+
+        .project-text-content {
+            flex-basis: 75%; /* Give more space to text */
+        }
+
+        .project-social-link {
+            flex-basis: 20%;
+            text-align: right;
+        }
+
+        .project-social-link img {
+            width: clamp(50px, 6vw, 100px); /* Responsive width: min, preferred, max */
+            height: auto;
+            opacity: 0.7;
+            transition: opacity 0.3s ease, box-shadow 0.3s ease;
+            border-radius: 4px; /* Optional: slight rounding for better shadow */
+            box-shadow: 0 0 5px rgba(17, 255, 210, 0.5); /* Softer initial glow */
+        }
+
+        .project-social-link img:hover {
+            opacity: 1;
+            box-shadow: 0 0 10px var(--primary-accent), 0 0 15px var(--primary-accent);
+        }
+
+        #project-description p {
+            font-size: 1.1em;
+        }
+
+        .tech-label {
+            background-color: var(--secondary-accent);
+            color: var(--bg-color);
+            padding: 3px 8px;
+            font-family: var(--font-secondary);
+            border-radius: 3px;
+            margin: 5px;
+            display: inline-block;
+        }
+
+        /* Observation Log */
+        #observation-log {
+            position: relative;
+            overflow: hidden; /* For radar */
+        }
+
+        .log-entry-container {
+            height: 200px;
+            overflow-y: auto;
+            border: 1px solid var(--secondary-accent);
+            padding: 10px;
+            background-color: rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+
+        .log-entry {
+            padding: 5px;
+            border-bottom: 1px dotted rgba(17, 255, 210, 0.3);
+            font-size: 0.9em;
+        }
+
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+
+        .pseudo-radar {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: clamp(200px, 25vw, 400px); /* Responsive width */
+            height: clamp(200px, 25vw, 400px); /* Responsive height */
+            z-index: -1;
+        }
+
+        .pseudo-radar .circle {
+            position: absolute;
+            border-radius: 50%;
+            border: 1px solid rgba(17, 255, 210, 0.2);
+            animation: sonar-pulse 4s infinite ease-out;
+        }
+
+        .pseudo-radar .circle:nth-child(1) { width: 33.33%; height: 33.33%; animation-delay: 0s; }
+        .pseudo-radar .circle:nth-child(2) { width: 66.66%; height: 66.66%; animation-delay: 1s; }
+        .pseudo-radar .circle:nth-child(3) { width: 100%; height: 100%; animation-delay: 2s; }
+
+        @keyframes sonar-pulse {
+            0% { transform: scale(0.1); opacity: 0; }
+            50% { opacity: 0.5; }
+            100% { transform: scale(1.2); opacity: 0; }
+        }
+
+        /* Gallery Section */
+        #gallery .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(clamp(200px, 25vw, 350px), 1fr)); /* Responsive minmax for columns */
+            gap: clamp(15px, 2vw, 30px); /* Responsive gap */
+        }
+
+        .gallery-item {
+            border: 1px solid var(--secondary-accent);
+            height: clamp(180px, 20vw, 300px); /* Responsive height */
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-color: rgba(0,0,0,0.5); /* Fallback/overlay color */
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .gallery-item:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px var(--primary-accent);
+        }
+
+        /* .gallery-item .silhouette CSS removed as it's no longer used */
+
+        .gallery-item .item-info {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: rgba(8, 31, 45, 0.8);
+            color: var(--primary-accent);
+            padding: 10px;
+            text-align: center;
+            opacity: 0;
+            transform: translateY(100%);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            font-size: 0.9em;
+        }
+
+        /* .gallery-item:hover .silhouette CSS removed */
+
+        .gallery-item:hover .item-info {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .filter-button {
+            font-family: var(--font-secondary);
+            background-color: var(--secondary-accent);
+            border: none;
+            color: var(--bg-color);
+            padding: 10px 20px;
+            margin-bottom: 20px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .filter-button:hover {
+            background-color: var(--primary-accent);
+        }
+
+        /* Night mode for gallery */
+        .night-mode #gallery {
+            background-color: #04121a; /* Darker background */
+        }
+        .night-mode .gallery-item {
+            border-color: #0f3a50;
+            filter: brightness(0.7) contrast(1.1) grayscale(0.2); /* Night vision filter for images */
+        }
+        /* .night-mode .gallery-item .silhouette CSS removed */
+        .night-mode .gallery-item::after { /* Noise effect */
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+            opacity: 0.05;
+            pointer-events: none;
+        }
+
+        /* Decrypted Theories */
+        .theory {
+            background-color: rgba(0,0,0,0.2);
+            border: 1px solid var(--secondary-accent);
+            margin-bottom: 15px;
+        }
+
+        .theory-header {
+            padding: 15px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: rgba(17, 255, 210, 0.05);
+        }
+
+        .theory-header:hover {
+            background-color: rgba(17, 255, 210, 0.1);
+        }
+
+        .theory-header h3 {
+            margin: 0;
+            font-size: 1.2em;
+        }
+
+        .theory-content {
+            padding: 0 15px;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-out, padding 0.5s ease-out;
+        }
+        
+        .theory-content.open {
+            padding: 15px;
+            max-height: 500px; /* Adjust as needed */
+        }
+
+        .theory-content pre {
+            background-color: #000;
+            color: var(--primary-accent);
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 0.85em;
+            border-left: 3px solid var(--primary-accent);
+        }
+
+        /* Anomaly Report */
+        #anomaly-report form label {
+            display: block;
+            margin-bottom: 5px;
+            color: var(--secondary-accent);
+        }
+
+        #anomaly-report form input,
+        #anomaly-report form textarea {
+            width: 100%;
+            background-color: rgba(0,0,0,0.3);
+            border: 1px solid var(--secondary-accent);
+            color: var(--text-color);
+            padding: 10px;
+            margin-bottom: 15px;
+            font-family: var(--font-secondary);
+            box-sizing: border-box;
+        }
+
+        #anomaly-report form input:focus,
+        #anomaly-report form textarea:focus {
+            outline: none;
+            border-color: var(--primary-accent);
+            box-shadow: 0 0 5px var(--primary-accent);
+        }
+
+        #anomaly-report form button {
+            font-family: var(--font-primary);
+            background-color: var(--primary-accent);
+            border: none;
+            color: var(--bg-color);
+            padding: 12px 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+        }
+
+        #anomaly-report form button:hover {
+            background-color: var(--text-color);
+            box-shadow: 0 0 10px var(--primary-accent);
+        }
+
+        #status-message {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: rgba(17, 255, 210, 0.1);
+            border: 1px solid var(--primary-accent);
+            color: var(--primary-accent);
+            text-align: center;
+            display: none; /* Hidden by default */
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 40px 20px;
+            border-top: 2px solid var(--primary-accent);
+            background-color: #04121a;
+        }
+
+        .ascii-logo {
+            font-family: monospace;
+            white-space: pre;
+            color: var(--secondary-accent);
+            font-size: 0.8em;
+            margin-bottom: 15px;
+            line-height: 1.2;
+        }
+
+        footer p {
+            font-size: 0.9em;
+            color: var(--secondary-accent);
+        }
+
+        /* Glitch Effect */
+        .glitch {
+            animation: glitch-anim 0.5s infinite;
+        }
+
+        @keyframes glitch-anim {
+            0% { transform: translate(0); }
+            20% { transform: translate(-3px, 3px); }
+            40% { transform: translate(-3px, -3px); }
+            60% { transform: translate(3px, 3px); }
+            80% { transform: translate(3px, -3px); }
+            100% { transform: translate(0); }
+        }
+
+        /* Alert Mode */
+        body.alert-mode {
+            animation: alert-flicker 0.2s infinite alternate;
+        }
+        body.alert-mode {
+            /* CSS variables for alert mode are set via JS on documentElement for broader scope */
+            /* Direct overrides for body and specific elements in alert mode are below */
+            --bg-color: #3d0000; /* This will be overridden by JS for global effect */
+            --primary-accent: #ff4747;
+            --secondary-accent: #ff8a8a;
+        }
+        body.alert-mode h1, body.alert-mode h2, body.alert-mode h3 {
+            color: #ff4747;
+            text-shadow: 0 0 5px #ff4747, 0 0 10px #ff4747;
+        }
+        body.alert-mode .terminal-button {
+            border-color: #ff4747;
+            color: #ff4747;
+            box-shadow: 0 0 10px #ff4747 inset, 0 0 5px #ff4747;
+        }
+        body.alert-mode .terminal-button:hover {
+            background-color: #ff4747;
+            color: #3d0000;
+        }
+        /* ... Add more overrides for alert mode as needed ... */
+
+        @keyframes alert-flicker {
+            0% { opacity: 0.8; }
+            100% { opacity: 1; }
+        }
+
+        /* Command Line Emulation */
+        #command-line-output {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            background-color: rgba(0,0,0,0.7);
+            color: var(--primary-accent);
+            padding: 8px 12px;
+            font-size: 0.9em;
+            border: 1px solid var(--secondary-accent);
+            border-radius: 3px;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+        #command-line-output.visible {
+            opacity: 1;
+        }
+
+    </style>
+</head>
+<body>
+    <audio src="audio/radar.mp3" autoplay loop id="background-audio">
+        Your browser does not support the audio element.
+    </audio>
+
+    <!-- Terminal Input Section -->
+    <section id="terminal-input">
+        <video autoplay loop muted playsinline disablepictureinpicture disableremoteplayback id="bg-video" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;">
+            <source src="video/background-video.mp4" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+        <h1 id="terminal-header">ACCESSING NESS SYSTEM...</h1>
+        <button class="terminal-button" id="initiate-monitoring">INITIATE MONITORING SYSTEM</button>
+    </section>
+
+    <main id="main-content" style="display: none;">
+        <!-- Project Description -->
+        <section id="project-description" class="section">
+            <div class="container">
+                <div class="project-text-content">
+                    <h2>OPERATION AQUARIUS: SUBMARINE ENTITY CONTAINMENT</h2>
+                    <p>This system provides real-time monitoring and data analysis for Project NESS (Nautical Enigmatic Submerged Specimen). Initiated in 1933, Operation AQUARIUS is a clandestine multinational effort dedicated to the study and potential containment of the entity colloquially known as the Loch Ness Monster. All data herein is classified LEVEL 7: EYES ONLY.</p>
+                    <p>
+                        <code class="tech-label">SYSTEM_STATUS: OPERATIONAL</code>
+                        <code class="tech-label">ENTITY_DESIGNATION: NESS-01</code>
+                        <code class="tech-label">CONTAINMENT_STATUS: UNSTABLE</code>
+                        <code class="tech-label">THREAT_LEVEL: AMBER</code>
+                    </p>
+                </div>
+                <div class="project-social-link">
+                    <a href="https://x.com/home" target="_blank" rel="noopener noreferrer">
+                        <img src="img/twitter.png" alt="Follow us on X/Twitter">
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Observation Log -->
+        <section id="observation-log" class="section">
+            <div class="container">
+                <h2>LIVE OBSERVATION LOG</h2>
+                <div class="pseudo-radar">
+                    <div class="circle"></div>
+                    <div class="circle"></div>
+                    <div class="circle"></div>
+                </div>
+                <div class="log-entry-container" id="log-container">
+                    <!-- Log entries will be added by JS -->
+                </div>
+                <button id="toggle-alert-mode" class="terminal-button" style="font-size: 0.8em; padding: 8px 15px;">TOGGLE ALERT MODE</button>
+            </div>
+        </section>
+
+        <!-- Gallery Section -->
+        <section id="gallery" class="section">
+            <div class="container">
+                <h2>SONAR IMAGE GALLERY (CLASSIFIED)</h2>
+                <button id="toggle-night-mode" class="filter-button">TOGGLE NIGHT VISION</button>
+                <div class="gallery-grid">
+                    <div class="gallery-item" style="background-image: url('img/2.avif');" data-id="SONAR_SCAN_001" data-date="2025-06-09" data-depth="175m">
+                        <div class="item-info">
+                            ID: SONAR_SCAN_001<br>Date: 2025-06-09<br>Depth: 175m
+                        </div>
+                    </div>
+                    <div class="gallery-item" style="background-image: url('img/3.jpg');" data-id="SONAR_SCAN_002" data-date="2025-06-08" data-depth="205m">
+                        <div class="item-info">
+                            ID: SONAR_SCAN_002<br>Date: 2025-06-08<br>Depth: 205m
+                        </div>
+                    </div>
+                    <div class="gallery-item" style="background-image: url('img/4.webp');" data-id="SONAR_SCAN_003" data-date="2025-06-07" data-depth="190m">
+                        <div class="item-info">
+                            ID: SONAR_SCAN_003<br>Date: 2025-06-07<br>Depth: 190m
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Decrypted Theories -->
+        <section id="decrypted-theories" class="section">
+            <div class="container">
+                <h2>DECRYPTED THEORIES & ANALYSES</h2>
+                <div class="theory">
+                    <div class="theory-header">
+                        <h3>THEORY A-01: SUBTERRANEAN PORTAL ANOMALY</h3>
+                        <span>[+]</span>
+                    </div>
+                    <div class="theory-content">
+                        <p>Analysis suggests a localized spatio-temporal distortion deep within the Loch. Possible interdimensional gateway.</p>
+                        <pre>// DATA FRAGMENT: PORTAL_SIG_774B
+// EIGENVALUE_FLUX: 4.77 SIGMA
+// CHRONITON_DENSITY: HIGH
+// STABILITY_INDEX: 0.12 (CRITICAL)
+
+function checkPortalIntegrity() {
+  const flux = getFluxReading('deep_scan_7');
+  if (flux > 4.5) {
+    triggerContainmentProtocol('ALPHA');
+    logEvent('PORTAL_EVENT_DETECTED', { level: 'CRITICAL' });
+    return 'UNSTABLE_PORTAL_DETECTED';
+  }
+  return 'NOMINAL';
+}</pre>
+                    </div>
+                </div>
+                <div class="theory">
+                    <div class="theory-header">
+                        <h3>THEORY B-04: HYBRID BIOLOGICAL ENTITY</h3>
+                        <span>[+]</span>
+                    </div>
+                    <div class="theory-content">
+                        <p>Genetic markers recovered from trace samples show anomalous sequences, suggesting a hybrid organism of unknown origin. Potentially bio-engineered or extraterrestrial.</p>
+                        <pre>// GENOME_SEQ_PARTIAL: NESS_HYB_00X
+// MARKER_XJ7: PRESENT (ANOMALOUS)
+// TELOMERE_DEGRADATION: MINIMAL
+// CELLULAR_REGENERATION: RAPID
+
+class HybridEntity {
+  constructor(dnaSequence) {
+    this.geneticCode = parseSequence(dnaSequence);
+    this.isTerrestrial = this.geneticCode.match(/^TERRA_.*/);
+  }
+  analyzeThreat() {
+    if (!this.isTerrestrial && this.geneticCode.hasMarker('XJ7')) {
+      return 'HIGH_RISK_UNKNOWN_ORIGIN';
+    }
+    return 'MODERATE_RISK';
+  }
+}</pre>
+                    </div>
+                </div>
+                <div class="theory">
+                    <div class="theory-header">
+                        <h3>THEORY C-11: ROGUE MILITARY PROTOTYPE</h3>
+                        <span>[+]</span>
+                    </div>
+                    <div class="theory-content">
+                        <p>Speculation points to a Cold War era experimental submersible or bio-weapon that escaped containment. Records are heavily redacted.</p>
+                        <pre>// PROJECT_CHIMERA_LOG_7B (REDACTED)
+// DEPLOYMENT_DATE: [CLASSIFIED]
+// OPERATIONAL_STATUS: ROGUE
+// RECOVERY_PRIORITY: MAXIMAL
+
+// PSEUDOCODE: TRACKING_SYSTEM_V3
+PROCEDURE Track_Entity (ID: NESS_01)
+  SIGNAL_STRENGTH = Get_Sonar_Ping(ID, 'DEEP_FREQ')
+  IF SIGNAL_STRENGTH > THRESHOLD_ALERT THEN
+    ACTIVATE_DRONE_SWARM('SEEK_AND_NEUTRALIZE')
+    LOG_MESSAGE('TARGET_ACQUIRED: ' + ID)
+  ELSE
+    CONTINUE_PASSIVE_MONITORING()
+  END IF
+END PROCEDURE</pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Anomaly Report -->
+        <section id="anomaly-report" class="section">
+            <div class="container">
+                <h2>REPORT NEW ANOMALY / SIGHTING</h2>
+                <form id="anomaly-form">
+                    <div>
+                        <label for="report-name">AGENT ID / CODENAME:</label>
+                        <input type="text" id="report-name" name="report-name" required>
+                    </div>
+                    <div>
+                        <label for="report-coords">COORDINATES (LAT/LON):</label>
+                        <input type="text" id="report-coords" name="report-coords" required>
+                    </div>
+                    <div>
+                        <label for="report-notes">OBSERVATION NOTES:</label>
+                        <textarea id="report-notes" name="report-notes" rows="5" required></textarea>
+                    </div>
+                    <button type="submit">TRANSMIT REPORT</button>
+                </form>
+                <div id="status-message"></div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer>
+            <div class="container">
+                <div class="ascii-logo">
+  _   _ _____ _____ ___ _____
+ | \ | | ____|_   _|_ _|_   _|
+ |  \| |  _|   | |  | |  | |
+ | |\  | |___  | |  | |  | |
+ |_| \_|_____| |_| |___| |_|
+  SYSTEM_V2 :: SUBMARINE NETWORK
+                </div>
+                <p>&copy; UK MOD &amp; Affiliated Agencies 1998&ndash;2025. Internal Submarine Network Only. Unauthorized Access Prohibited.</p>
+            </div>
+        </footer>
+    </main>
+
+    <div id="command-line-output"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const initiateButton = document.getElementById('initiate-monitoring');
+            const terminalInputSection = document.getElementById('terminal-input');
+            const mainContent = document.getElementById('main-content');
+            const commandLineOutput = document.getElementById('command-line-output');
+            const backgroundAudio = document.getElementById('background-audio');
+
+            // Terminal typing effect for header
+            const terminalHeader = document.getElementById('terminal-header');
+            const originalHeaderText = terminalHeader.textContent;
+            terminalHeader.textContent = '';
+            let i = 0;
+            function typeHeader() {
+                if (i < originalHeaderText.length) {
+                    terminalHeader.textContent += originalHeaderText.charAt(i);
+                    i++;
+                    setTimeout(typeHeader, 80); // Adjust typing speed
+                } else {
+                    terminalHeader.style.borderRight = '.15em solid var(--primary-accent)'; // Keep cursor blinking
+                }
+            }
+            // Start typing after a short delay to ensure animation visibility
+            setTimeout(typeHeader, 500);
+
+
+            // Show main content on button click
+            initiateButton.addEventListener('click', () => {
+                // Attempt to play audio on first user interaction if browser blocked autoplay
+                if (backgroundAudio && backgroundAudio.paused) {
+                    backgroundAudio.play().catch(error => console.warn('Autoplay was prevented:', error));
+                }
+                terminalInputSection.style.transition = 'opacity 1s ease-out';
+                terminalInputSection.style.opacity = '0';
+                displayCommandLineMessage('SYSTEM INITIALIZED. LOADING MODULES...');
+                setTimeout(() => {
+                    terminalInputSection.style.display = 'none';
+                    mainContent.style.display = 'block';
+                    // Trigger scroll animations for already visible sections
+                    revealSectionsOnScroll(); 
+                    startLogScroller();
+                    displayCommandLineMessage('ALL SYSTEMS NOMINAL. MONITORING ACTIVE.');
+                }, 1000);
+            });
+
+            // Scroll-triggered animations for sections
+            const sections = document.querySelectorAll('.section');
+            const revealSection = (entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                        // observer.unobserve(entry.target); // Optional: stop observing after revealed
+                    }
+                });
+            };
+            const sectionObserver = new IntersectionObserver(revealSection, {
+                root: null,
+                threshold: 0.15, // 15% of section visible
+            });
+            function revealSectionsOnScroll() {
+                 sections.forEach(section => sectionObserver.observe(section));
+            }
+            // Initial check in case sections are already in view (after main content display)
+            // This is now called after mainContent is displayed.
+
+            // Observation Log Scroller
+            const logContainer = document.getElementById('log-container');
+            const logEntries = [
+                "[2025-06-09 03:15:02] Depth: 188m, Temp: 4.1C, Signal: Weak Anomaly Detected",
+                "[2025-06-09 03:18:30] Depth: 192m, Temp: 4.0C, Signal: Fluctuating, Pattern Unclear",
+                "[2025-06-09 03:22:15] Depth: 205m, Temp: 3.9C, Signal: Stronger, Possible Biomass",
+                "[2025-06-09 03:25:40] Depth: 210m, Temp: 3.8C, Signal: Lost Contact. Re-acquiring...",
+                "[2025-06-09 03:30:05] Depth: 190m, Temp: 4.0C, Signal: Faint trace, northern sector",
+                "[2025-06-09 03:35:12] Depth: 175m, Temp: 4.2C, System Recalibrating Sonar Array",
+                "[2025-06-09 03:40:50] Depth: 182m, Temp: 4.1C, Ambient Noise Levels Normalizing",
+                "[2025-06-09 03:45:22] Depth: 195m, Temp: 3.9C, Monitoring Passive Scan Mode"
+            ];
+            let currentLogIndex = 0;
+            function addLogEntry() {
+                if (!logContainer) return;
+                if (currentLogIndex < logEntries.length) {
+                    const entryDiv = document.createElement('div');
+                    entryDiv.classList.add('log-entry');
+                    entryDiv.textContent = logEntries[currentLogIndex];
+                    logContainer.appendChild(entryDiv);
+                    logContainer.scrollTop = logContainer.scrollHeight; // Auto-scroll to bottom
+                    currentLogIndex++;
+                } else {
+                    // Optional: loop logs or stop
+                    // currentLogIndex = 0; // to loop
+                }
+            }
+            function startLogScroller() {
+                 if (!logContainer) return;
+                 setInterval(addLogEntry, 3000); // Add new log every 3 seconds
+            }
+
+            // Gallery: Night Mode Toggle
+            const nightModeButton = document.getElementById('toggle-night-mode');
+            const gallerySection = document.getElementById('gallery');
+            nightModeButton.addEventListener('click', () => {
+                document.body.classList.toggle('night-mode');
+                displayCommandLineMessage(document.body.classList.contains('night-mode') ? 'NIGHT VISION ENGAGED' : 'NIGHT VISION DISENGAGED');
+            });
+
+            // Gallery: Glitch effect on item click
+            const galleryItems = document.querySelectorAll('.gallery-item');
+            galleryItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    item.classList.add('glitch');
+                    displayCommandLineMessage(`ANALYZING IMAGE: ${item.dataset.id}... POSSIBLE ENTITY SIGNATURE.`);
+                    setTimeout(() => item.classList.remove('glitch'), 500);
+                });
+            });
+
+            // Decrypted Theories: Accordion
+            const theoryHeaders = document.querySelectorAll('.theory-header');
+            theoryHeaders.forEach(header => {
+                header.addEventListener('click', () => {
+                    const content = header.nextElementSibling;
+                    const isOpen = content.classList.contains('open');
+                    // Close all others
+                    document.querySelectorAll('.theory-content.open').forEach(openContent => {
+                        if (openContent !== content) {
+                            openContent.classList.remove('open');
+                            openContent.previousElementSibling.querySelector('span').textContent = '[+]';
+                        }
+                    });
+                    // Toggle current
+                    content.classList.toggle('open');
+                    header.querySelector('span').textContent = isOpen ? '[+]' : '[-]';
+                    displayCommandLineMessage(isOpen ? `COLLAPSING DATA: ${header.querySelector('h3').textContent}` : `EXPANDING DATA: ${header.querySelector('h3').textContent}`);
+                });
+            });
+
+            // Anomaly Report Form
+            const anomalyForm = document.getElementById('anomaly-form');
+            const statusMessage = document.getElementById('status-message');
+            anomalyForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const formData = new FormData(anomalyForm);
+                const agentId = formData.get('report-name');
+                displayCommandLineMessage(`TRANSMITTING REPORT FROM AGENT: ${agentId}...`);
+                statusMessage.textContent = 'TRANSMITTING DATA... STAND BY...';
+                statusMessage.style.display = 'block';
+                statusMessage.style.borderColor = 'var(--secondary-accent)';
+                statusMessage.style.color = 'var(--secondary-accent)';
+
+                setTimeout(() => {
+                    statusMessage.textContent = 'Object registered. Data transmission successful. Awaiting confirmation.';
+                    statusMessage.style.borderColor = 'var(--primary-accent)';
+                    statusMessage.style.color = 'var(--primary-accent)';
+                    anomalyForm.reset();
+                    displayCommandLineMessage('REPORT RECEIVED AND LOGGED. STANDING BY.');
+                }, 2000);
+            });
+
+            // Alert Mode Toggle
+            const alertModeButton = document.getElementById('toggle-alert-mode');
+            alertModeButton.addEventListener('click', () => {
+                document.body.classList.toggle('alert-mode');
+                const isAlert = document.body.classList.contains('alert-mode');
+                if (isAlert) {
+                    displayCommandLineMessage('!!! ALERT MODE ACTIVATED !!! SYSTEM UNDER STRESS !!!');
+                    // Change CSS variables for alert mode (more robustly)
+                    document.documentElement.style.setProperty('--bg-color', '#3d0000');
+                    document.documentElement.style.setProperty('--primary-accent', '#ff4747');
+                    document.documentElement.style.setProperty('--secondary-accent', '#ff8a8a');
+                    document.documentElement.style.setProperty('--text-color', '#ffe0e0');
+                } else {
+                    displayCommandLineMessage('ALERT MODE DEACTIVATED. RETURNING TO NOMINAL OPERATIONS.');
+                    // Revert CSS variables
+                    document.documentElement.style.setProperty('--bg-color', '#081f2d');
+                    document.documentElement.style.setProperty('--primary-accent', '#11ffd2');
+                    document.documentElement.style.setProperty('--secondary-accent', '#00b4a0');
+                    document.documentElement.style.setProperty('--text-color', '#ffffff');
+                }
+            });
+
+            // Command Line Emulation Output
+            let commandMessageTimer;
+            function displayCommandLineMessage(message) {
+                commandLineOutput.textContent = `> ${message}`;
+                commandLineOutput.classList.add('visible');
+                clearTimeout(commandMessageTimer);
+                commandMessageTimer = setTimeout(() => {
+                    commandLineOutput.classList.remove('visible');
+                }, 4000); // Message visible for 4 seconds
+            }
+        });
+    </script>
+</body>
+</html>
